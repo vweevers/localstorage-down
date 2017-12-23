@@ -1,6 +1,6 @@
 {
-  "name": "localstorage-down",
-  "description": "abstract-leveldown compliant Web Storage store for browsers and Node.js",
+  "name": "webstorage-down",
+  "description": "abstract-leveldown compliant Web Storage wrapper for mobile and desktop browsers",
   "version": "0.6.7",
   "license": "MIT",
   "contributors": [
