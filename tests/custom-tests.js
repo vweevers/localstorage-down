@@ -1,7 +1,6 @@
 'use strict';
 
 var levelup = require('levelup');
-var LocalStorage = require('../lib/localstorage').LocalStorage;
 
 module.exports.setUp = function (leveldown, test, testCommon) {
   test('setUp common', testCommon.setUp);
@@ -11,32 +10,86 @@ module.exports.setUp = function (leveldown, test, testCommon) {
   });
 };
 
-module.exports.all = function (leveldown, tape, testCommon) {
+module.exports.all = function (leveldown, test, testCommon) {
+  module.exports.setUp(leveldown, test, testCommon);
 
-  module.exports.setUp(leveldown, tape, testCommon);
+  test('test buffer and string base64-encoding equality', function (t) {
+    var db = leveldown(testCommon.location());
 
-  tape('test .destroy', function (t) {
-    var db = levelup('destroy-test', {db: leveldown});
-    var db2 = levelup('other-db', {db: leveldown});
-    db2.put('key2', 'value2', function (err) {
-      t.notOk(err, 'no error' );
+    db.open(function (err) {
+      t.ifError(err, 'no open error');
+
+      db.put('a', 'value', function (err) {
+        t.ifError(err, 'no put error');
+
+        // If string keys are not base64-encoded (with the same character
+        // mapping as Buffer keys), then 'a' would be > Buffer.from('a').
+        var it = db.iterator({ gt: Buffer.from('a') });
+
+        testCommon.collectEntries(it, function (err, entries) {
+          t.ifError(err, 'no iterator error');
+          t.same(entries.length, 0);
+
+          db.close(t.end.bind(t));
+        });
+      });
+    });
+  });
+
+  test('test custom localStorage', function (t) {
+    t.plan(5);
+
+    var location = testCommon.location();
+    var db = leveldown(location, {
+      setItem: function (key, value) {
+        t.is(key, location + '!PqKt');
+        t.is(value, 'svalue');
+      }
+    });
+
+    db.open(function (err) {
+      t.ifError(err, 'no open error');
+
       db.put('key', 'value', function (err) {
-        t.notOk(err, 'no error');
-        db.get('key', function (err, value) {
-          t.notOk(err, 'no error');
-          t.equal(value, 'value', 'should have value');
-          db.close(function (err) {
-            t.notOk(err, 'no error');
-            leveldown.destroy('destroy-test', function (err) {
-              t.notOk(err, 'no error');
-              var db3 = levelup('destroy-test', {db: leveldown});
-              db3.get('key', function (err, value) {
-                t.ok(err, 'key is not there');
-                db2.get('key2', function (err, value) {
-                  t.notOk(err, 'no error');
-                  t.equal(value, 'value2', 'should have value2');
-                  t.end();
-                });
+        t.ifError(err, 'no put error');
+
+        db.close(function (err) {
+          t.ifError(err, 'no close error');
+        });
+      });
+    });
+  });
+
+  test('test .clear', function (t) {
+    t.plan(8);
+
+    var loc1 = testCommon.location();
+    var loc2 = testCommon.location();
+
+    var db = leveldown(loc1);
+    var db2 = leveldown(loc2);
+
+    db2.put('key2', 'value2', function (err) {
+      t.ifError(err, 'no put error');
+
+      db.put('key', 'value', function (err) {
+        t.ifError(err, 'no put error');
+
+        db.get('key', { asBuffer: false }, function (err, value) {
+          t.ifError(err, 'no get error');
+          t.is(value, 'value', 'should have value');
+
+          db.clear(function (err) {
+            t.ifError(err, 'no clear error');
+
+            var db3 = leveldown(loc1);
+
+            db3.get('key', { asBuffer: false }, function (err, value) {
+              t.ok(err, 'key is not there');
+
+              db2.get('key2', { asBuffer: false }, function (err, value) {
+                t.ifError(err, 'no get error');
+                t.is(value, 'value2', 'should have value2');
               });
             });
           });
@@ -45,10 +98,15 @@ module.exports.all = function (leveldown, tape, testCommon) {
     });
   });
 
-  tape('test .destroy with multiple dbs', function (t) {
-    var db = levelup('a', {db: leveldown});
-    var db2 = levelup('b', {db: leveldown});
-    var db3 = levelup('c', {db: leveldown});
+  test('test .clear with multiple dbs', function (t) {
+    var loc1 = testCommon.location();
+    var loc2 = testCommon.location();
+    var loc3 = testCommon.location();
+
+    var db = levelup(leveldown(loc1));
+    var db2 = levelup(leveldown(loc2));
+    var db3 = levelup(leveldown(loc3));
+
     db.put('1', '1', function (err) {
       t.notOk(err, 'no error');
       db2.put('1', '1', function (err) {
@@ -59,13 +117,13 @@ module.exports.all = function (leveldown, tape, testCommon) {
             t.notOk(err, 'no error');
             db2.put('3', '3', function (err) {
               t.notOk(err, 'no error');
-              leveldown.destroy('b', function (err) {
+              db2.db.clear(function (err) {
                 t.notOk(err, 'no error');
-                db3.get('1', function (err, res) {
+                db3.get('1', { asBuffer: false }, function (err, res) {
                   t.notOk(err, 'no error');
-                  t.equal(res, '1');
-                  db2 = levelup('b', {db: leveldown});
-                  db2.get('3', function (err) {
+                  t.is(res, '1');
+                  db2 = levelup(leveldown(loc2));
+                  db2.get('3', { asBuffer: false }, function (err) {
                     t.ok(err);
                     t.end();
                   });
@@ -78,9 +136,10 @@ module.exports.all = function (leveldown, tape, testCommon) {
     });
   });
 
-  tape('test escaped db name', function (t) {
-    var db = levelup('bang!', {db: leveldown});
-    var db2 = levelup('bang!!', {db: leveldown});
+  test('test escaped db name', function (t) {
+    var db = levelup(leveldown('bang!'));
+    var db2 = levelup(leveldown('bang!!'));
+
     db.put('!db1', '!db1', function (err) {
       t.notOk(err, 'no error');
       db2.put('db2', 'db2', function (err) {
@@ -89,8 +148,10 @@ module.exports.all = function (leveldown, tape, testCommon) {
           t.notOk(err, 'no error');
           db2.close(function (err) {
             t.notOk(err, 'no error');
-            db = levelup('bang!', {db: leveldown});
-            db.get('!db2', function (err, key, value) {
+
+            var db3 = levelup(leveldown('bang!'));
+
+            db3.get('!db2', function (err, key, value) {
               t.ok(err, 'got error');
               t.equal(key, undefined, 'key should be null');
               t.equal(value, undefined, 'value should be null');
@@ -102,10 +163,10 @@ module.exports.all = function (leveldown, tape, testCommon) {
     });
   });
 
-  tape('delete while iterating', function (t) {
+  test('delete while iterating', function (t) {
     var db = leveldown(testCommon.location());
     var noerr = function (err) {
-      t.error(err, 'opens crrectly');
+      t.error(err, 'no error');
     };
     var noop = function () {};
     var iterator;
@@ -129,10 +190,10 @@ module.exports.all = function (leveldown, tape, testCommon) {
     });
   });
 
-  tape('add many while iterating', function (t) {
+  test('add many while iterating', function (t) {
     var db = leveldown(testCommon.location());
     var noerr = function (err) {
-      t.error(err, 'opens crrectly');
+      t.error(err, 'no error');
     };
     var noop = function () {};
     var iterator;
@@ -163,10 +224,10 @@ module.exports.all = function (leveldown, tape, testCommon) {
     });
   });
 
-  tape('concurrent batch delete while iterating', function (t) {
+  test('concurrent batch delete while iterating', function (t) {
     var db = leveldown(testCommon.location());
     var noerr = function (err) {
-      t.error(err, 'opens crrectly');
+      t.error(err, 'no error');
     };
     var noop = function () {};
     var iterator;
@@ -193,11 +254,11 @@ module.exports.all = function (leveldown, tape, testCommon) {
     });
   });
 
-  tape('iterate past end of db', function (t) {
-    var db = leveldown('aaaaaa');
-    var db2 = leveldown('bbbbbb');
+  test('iterate past end of db', function (t) {
+    var db = leveldown(testCommon.location());
+    var db2 = leveldown(testCommon.location());
     var noerr = function (err) {
-      t.error(err, 'opens crrectly');
+      t.error(err, 'no error');
     };
     var noop = function () {};
     var iterator;
@@ -223,10 +284,10 @@ module.exports.all = function (leveldown, tape, testCommon) {
     });
   });
 
-  tape('next() callback is dezalgofied', function (t) {
-    var db = leveldown('aaaaaa');
+  test('next() callback is dezalgofied', function (t) {
+    var db = leveldown(testCommon.location());
     var noerr = function (err) {
-      t.error(err, 'opens crrectly');
+      t.error(err, 'no error');
     };
     var noop = function () {
     };
@@ -261,13 +322,16 @@ module.exports.all = function (leveldown, tape, testCommon) {
     t.ok(!zalgoReleased, 'zalgo not released (1)');
   });
 
-  tape('bypasses getItem for keys-only db streams', function (t) {
-    var origGetItem = LocalStorage.prototype.getItem;
-    LocalStorage.prototype.getItem = function () {
-      throw new Error('shouldn\'t get called for keys-only db streams');
+  test('bypasses getItem for key streams', function (t) {
+    t.plan(3);
+
+    var down = leveldown(testCommon.location());
+    var db = levelup(down);
+
+    down._storage.getItem = function () {
+      t.fail('shouldn\'t get called for key streams');
     };
 
-    var db = levelup('ooga', { db: leveldown });
     var batch = [
       {
         key: 'a',
@@ -286,19 +350,21 @@ module.exports.all = function (leveldown, tape, testCommon) {
       },
     ];
 
-    db.batch(batch, function () {
+    db.batch(batch, function (err) {
+      t.ifError(err, 'no batch error');
+
       db.createKeyStream({
-          start: 'c'
-        })
-        .on('data', function (key) {
-          t.equals(key, 'c');
-          db.close(function (err) {
-            t.notOk(err, 'no error');
-            // unhack getItem
-            LocalStorage.prototype.getItem = origGetItem;
-            t.end();
-          });
+        start: 'c',
+        keyAsBuffer: false
+      })
+      .on('data', function (key) {
+        t.equals(key, 'c');
+      })
+      .on('end', function () {
+        db.close(function (err) {
+          t.ifError(err, 'no close error');
         });
+      });
     });
   });
 };

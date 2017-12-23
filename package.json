@@ -19,8 +19,9 @@
     "argsarray": "0.0.1",
     "buffer-from": "^0.1.1",
     "d64": "^1.0.0",
-    "humble-localstorage": "^1.4.2",
     "inherits": "^2.0.1",
+    "localstorage-memory": "~1.0.2",
+    "safe-buffer": "~5.1.1",
     "tiny-queue": "0.2.0"
   },
   "devDependencies": {
@@ -39,7 +40,8 @@
     "url": "https://github.com/no9/localstorage-down.git"
   },
   "browser": {
-    "bindings": false
+    "bindings": false,
+    "./lib/storage.js": "./lib/storage-browser.js"
   },
   "scripts": {
     "test": "npm run jshint && tape tests/test.js",
