@@ -1,19 +1,29 @@
 {
   "name": "localstorage-down",
-  "description": "A Node.js and browserify leveldown API implementation that maps to localstorage in the browser",
+  "description": "abstract-leveldown compliant Web Storage store for browsers and Node.js",
+  "version": "0.6.7",
+  "license": "MIT",
   "contributors": [
     "Anton Whalley <antonwhalley@vodafone.ie> (https://github.com/no9)",
     "Adam Shih (https://github.com/adamshih)",
     "Nolan Lawson (https://github.com/nolanlawson)"
   ],
-  "keywords": [
-    "leveldb",
-    "localstorage",
-    "leveldown",
-    "levelup"
-  ],
-  "version": "0.6.7",
   "main": "lib/index.js",
+  "files": [
+    "lib"
+  ],
+  "browser": {
+    "bindings": false,
+    "./lib/storage.js": "./lib/storage-browser.js"
+  },
+  "scripts": {
+    "test": "npm run jshint && tape tests/test.js",
+    "test-browser": "npm run jshint && zuul --no-coverage tests/test.js",
+    "test-zuul-local": "npm run jshint && zuul --no-coverage --local 9000 tests/test.js",
+    "jshint": "jshint -c .jshintrc lib tests",
+    "coverage": "istanbul cover ./node_modules/.bin/tape tests/*.js && istanbul check-coverage --lines 50 --function 50 --statements 50 --branches 50",
+    "report-coverage": "npm run coverage && istanbul-coveralls --no-rm"
+  },
   "dependencies": {
     "abstract-leveldown": "github:level/abstract-leveldown#88b8900",
     "d64": "^1.0.0",
@@ -36,39 +46,13 @@
     "type": "git",
     "url": "https://github.com/no9/localstorage-down.git"
   },
-  "browser": {
-    "bindings": false,
-    "./lib/storage.js": "./lib/storage-browser.js"
-  },
-  "scripts": {
-    "test": "npm run jshint && tape tests/test.js",
-    "test-browser": "npm run jshint && zuul --no-coverage tests/test.js",
-    "test-zuul-local": "npm run jshint && zuul --no-coverage --local 9000 tests/test.js",
-    "jshint": "jshint -c .jshintrc lib tests",
-    "coverage": "istanbul cover ./node_modules/.bin/tape tests/*.js && istanbul check-coverage --lines 50 --function 50 --statements 50 --branches 50",
-    "report-coverage": "npm run coverage && istanbul-coveralls --no-rm"
-  },
-  "testling": {
-    "files": [
-      "tests/test.js"
-    ],
-    "browsers": [
-      "iexplore/8..latest",
-      "chrome/22..latest",
-      "chrome/canary",
-      "firefox/24..latest",
-      "firefox/nightly",
-      "opera/15..latest",
-      "opera/next",
-      "safari/5.0.5..latest",
-      "iphone/latest",
-      "ipad/latest",
-      "android-browser/latest"
-    ]
-  },
-  "license": "MIT",
-  "gypfile": false,
-  "files": [
-    "lib"
+  "keywords": [
+    "leveldb",
+    "webstorage",
+    "localstorage",
+    "sessionstorage",
+    "leveldown",
+    "levelup",
+    "level"
   ]
 }
