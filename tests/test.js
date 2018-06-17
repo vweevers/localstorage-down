@@ -22,18 +22,10 @@ require('abstract-leveldown/abstract/put-test').all(webstorage, test, testCommon
 require('abstract-leveldown/abstract/get-test').all(webstorage, test, testCommon);
 require('abstract-leveldown/abstract/put-get-del-test').all(webstorage, test, testCommon);
 require('abstract-leveldown/abstract/close-test').close(webstorage, test, testCommon);
-require('abstract-leveldown/abstract/iterator-test').setUp(webstorage, test, testCommon);
-require('abstract-leveldown/abstract/iterator-test').args(test);
-require('abstract-leveldown/abstract/iterator-test').sequence(test);
-require('abstract-leveldown/abstract/iterator-test').iterator(webstorage, test, testCommon);
-
-// Skip snapshot test, we cannot offer such guarantees.
-// require('abstract-leveldown/abstract/iterator-test').snapshot(webstorage, test, testCommon);
-
-require('abstract-leveldown/abstract/iterator-test').tearDown(test, testCommon);
+require('abstract-leveldown/abstract/iterator-test').all(webstorage, test, testCommon);
 require('abstract-leveldown/abstract/iterator-range-test').all(webstorage, test, testCommon);
+require('abstract-leveldown/abstract/iterator-no-snapshot-test').all(webstorage, test, testCommon);
 require('abstract-leveldown/abstract/chained-batch-test').all(webstorage, test, testCommon);
-
 require('abstract-leveldown/abstract/batch-test').all(webstorage, test, testCommon);
 
 require('./custom-tests.js').all(webstorage, test, testCommon);
