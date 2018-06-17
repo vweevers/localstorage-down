@@ -25,7 +25,7 @@
     "report-coverage": "npm run coverage && istanbul-coveralls --no-rm"
   },
   "dependencies": {
-    "abstract-leveldown": "github:level/abstract-leveldown#88b8900",
+    "abstract-leveldown": "~5.0.0",
     "d64": "^1.0.0",
     "inherits": "^2.0.1",
     "localstorage-memory": "~1.0.2",
